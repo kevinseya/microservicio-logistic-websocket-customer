@@ -15,7 +15,7 @@ function setupWebSocket(server) {
             console.log("📩 Mensaje recibido:", msg);
             try {
                 const event = JSON.parse(msg);
-                if (event.operation && event.user) {
+                if (event.operation && event.customer) {
                     await saveEvent(event);
                     console.log(`Event ${event.operation} save on CouchDB with state "PEDING".`);
                 } else {

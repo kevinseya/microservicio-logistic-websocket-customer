@@ -1,31 +1,36 @@
 const { getDatabase } = require("../config/couchdb");
 const { sendWebSocketMessage } = require("../services/eventSender");
-const sqlserverConnection = require("../config/sqlserverConfig");
+const getSqlServerConnection = require("../config/sqlserverConfig");
 const postgresConnection = require("../config/postgresConfig");
+const sql = require('mssql');
 
-// Function to convert UUID to 16 bytes
+// Función para convertir UUID a Buffer (útil para PostgreSQL)
 function uuidToBuffer(uuid) {
   const hex = uuid.replace(/-/g, "");
   return Buffer.from(hex, "hex");
 }
 
-// Create CUSTOmER on MariaDB
-async function createUserInSQLServer(user) {
+// Crea un usuario en SQL Server usando parámetros nombrados
+async function createUserInSQLServer(customer) {
     try {
+        const pool = await getSqlServerConnection();
         const query = `
-            INSERT INTO user (id, email, lastname, name, password, phone, address)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO [customer] (id, email, lastname, name, password, phone, address, active)
+            VALUES (@id, @email, @lastname, @name, @password, @phone, @address, @active)
         `;
-        const values = [
-            uuidToBuffer(user.id), 
-            user.email,
-            user.lastname,
-            user.name,
-            user.password,
-            user.phone,
-            user.role,
-        ];
-        await sqlserverConnection.query(query, values);
+        const request = pool.request();
+        // Usamos el tipo UniqueIdentifier para el id y VarChar para los demás campos
+        request.input('id', sql.UniqueIdentifier, customer.id);
+        request.input('email', sql.VarChar, customer.email);
+        request.input('lastname', sql.VarChar, customer.lastname);
+        request.input('name', sql.VarChar, customer.name);
+        request.input('password', sql.VarChar, customer.password);
+        request.input('phone', sql.VarChar, customer.phone);
+        request.input('address', sql.VarChar, customer.address);
+        request.input('active', sql.Bit, customer.active);
+
+        
+        await request.query(query);
         console.log("Customer created on SQLServer.");
     } catch (error) {
         console.error("Error creating customer on SQLServer:", error.message);
@@ -33,52 +38,54 @@ async function createUserInSQLServer(user) {
     }
 }
 
-// Update CUSTOMER on SQLServer
-async function updateUserInSQLServer(user) {
+// Actualiza un usuario en SQL Server usando parámetros nombrados
+async function updateUserInSQLServer(customer) {
     try {
-        // Fields that are usually updated
-        let query = 'UPDATE user SET email = ?, lastname = ?, name = ?';
-        const values = [user.email, user.lastname, user.name];
-
-        // If allowed password not empty, save on the update
-        if (user.password && user.password.trim() !== '') {
-            query += ', password = ?';
-            values.push(user.password);
+        const pool = await getSqlServerConnection();
+        let query = `UPDATE [customer] SET email = @email, lastname = @lastname, name = @name`;
+        if (customer.password && customer.password.trim() !== '') {
+            query += `, password = @password`;
         }
-
-        //Continue to the rest of the fields
-        query += ', phone = ?, address = ? WHERE id = ?';
-        values.push(user.phone, user.role, uuidToBuffer(user.id)); // Conversión de UUID a Buffer
-
-        await sqlserverConnection.query(query, values);
-        console.log("Customer update on SQLServer.");
+        query += `, phone = @phone, address = @address WHERE id = @id`;
+        
+        const request = pool.request();
+        request.input('email', sql.VarChar, customer.email);
+        request.input('lastname', sql.VarChar, customer.lastname);
+        request.input('name', sql.VarChar, customer.name);
+        if (customer.password && customer.password.trim() !== '') {
+            request.input('password', sql.VarChar, customer.password);
+        }
+        request.input('phone', sql.VarChar, customer.phone);
+        request.input('address', sql.VarChar, customer.address);
+        request.input('id', sql.UniqueIdentifier, customer.id);
+        
+        await request.query(query);
+        console.log("Customer updated on SQLServer.");
     } catch (error) {
         console.error("Error updating customer on SQLServer:", error.message);
         throw error;
     }
 }
 
-
-
-//Delete CUSTOMER on PostgreSQL
-async function deleteUserFromPostgreSQL(user) {
+// Elimina un usuario en PostgreSQL (se mantiene igual)
+async function deleteUserFromPostgreSQL(customer) {
     try {
-        const query = `DELETE FROM user WHERE id = ?`;
-        await postgresConnection.query(query, [uuidToBuffer(user)]);
-        console.log("Customer delete on PostgreSQ.");
+        const query = `UPDATE customer SET active = false WHERE id = $1`;
+        await postgresConnection.query(query, [uuidToBuffer(customer)]);
+        console.log("Customer deleted on PostgreSQL.");
     } catch (error) {
-        console.error("Error deleting customer on PostgreSQ:", error.message);
+        console.error("Error deleting customer on PostgreSQL:", error.message);
         throw error;
     }
 }
 
 async function processPendingEvents() {
     try {
-        console.log("Proccesing pending events...");
+        console.log("Processing pending events...");
         const db = await getDatabase();
 
         if (!db) {
-            console.error("The database not initialized.");
+            console.error("The database is not initialized.");
             return;
         }
 
@@ -93,24 +100,24 @@ async function processPendingEvents() {
         }
 
         for (const event of response.docs) {
-            console.log(`📌 Proccesing event: ${event.operation} to ${event.user?.email || event.userId}`);
+            console.log(`📌 Processing event: ${event.operation} for ${event.customer?.email || event.customerId}`);
             
             try {
-                // Sent event by WebSocket all services 
+                // Envía el evento vía WebSocket a todos los servicios
                 sendWebSocketMessage(event.operation, event);
 
-                // Synchronize between bases according to the type of operation: 
+                // Sincroniza entre bases según el tipo de operación
                 if (event.operation === "CREATE") {
-                    await createUserInSQLServer(event.user);
+                    await createUserInSQLServer(event.customer);
                 } else if (event.operation === "UPDATE") {
-                    await updateUserInSQLServer(event.user);
+                    await updateUserInSQLServer(event.customer);
                 } else if (event.operation === "DELETE") {
-                    await deleteUserFromPostgreSQL(event.user);
+                    await deleteUserFromPostgreSQL(event.customer);
                 }
                 
                 event.status = "PROCESSED";
                 await db.insert(event);
-                console.log(`Event ${event.operation} proccesed and mark with PROCESSED.`);
+                console.log(`Event ${event.operation} processed and marked as PROCESSED.`);
             } catch (err) {
                 console.error(`Error processing event ${event.operation}: ${err.message}`);
             }
