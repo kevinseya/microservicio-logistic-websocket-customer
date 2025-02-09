@@ -44,14 +44,14 @@ jobs:
               sudo systemctl enable docker
             fi
 
-            # Bajar la imagen
+            # Download the image
             sudo docker pull kevinseya/logistic_websocket_customer:latest
 
-            # Detener y eliminar contenedor anterior
+            # Stop and remove previous container
             sudo docker stop logistic_websocket_customer || true
             sudo docker rm logistic_websocket_customer || true
 
-            # Generar archivo .env
+            # Generate .env file
             echo "COUCHDB_URL=${{ secrets.COUCHDB_URL }}" > .env
             echo "PORT=${{ secrets.PORT }}" >> .env
             echo "SQL_SERVER_HOST=${{ secrets.SQL_SERVER_HOST }}" >> .env
@@ -64,7 +64,7 @@ jobs:
             echo "POSTGRES_PORT=${{ secrets.POSTGRES_PORT }}" >> .env
             echo "POSTGRES_DATABASE=${{ secrets.POSTGRES_DATABASE }}" >> .env
 
-            # Ejecutar nuevo contenedor
+            # Run new container
             sudo docker run -d --name logistic_websocket_customer \
               --env-file .env \
               -p 5002:5002 \
