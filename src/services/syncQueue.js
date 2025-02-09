@@ -4,13 +4,13 @@ const getSqlServerConnection = require("../config/sqlserverConfig");
 const postgresConnection = require("../config/postgresConfig");
 const sql = require('mssql');
 
-// Función para convertir UUID a Buffer (útil para PostgreSQL)
+// Function to convert UUID to Buffer (useful for PostgreSQL)
 function uuidToBuffer(uuid) {
   const hex = uuid.replace(/-/g, "");
   return Buffer.from(hex, "hex");
 }
 
-// Crea un usuario en SQL Server usando parámetros nombrados
+// Create a user in SQL Server using named parameters
 async function createUserInSQLServer(customer) {
     try {
         const pool = await getSqlServerConnection();
@@ -19,7 +19,7 @@ async function createUserInSQLServer(customer) {
             VALUES (@id, @email, @lastname, @name, @password, @phone, @address, @active)
         `;
         const request = pool.request();
-        // Usamos el tipo UniqueIdentifier para el id y VarChar para los demás campos
+        // We use the UniqueIdentifier type for the id and VarChar for the other fields
         request.input('id', sql.UniqueIdentifier, customer.id);
         request.input('email', sql.VarChar, customer.email);
         request.input('lastname', sql.VarChar, customer.lastname);
@@ -38,7 +38,7 @@ async function createUserInSQLServer(customer) {
     }
 }
 
-// Actualiza un usuario en SQL Server usando parámetros nombrados
+// Update a user in SQL Server using named parameters
 async function updateUserInSQLServer(customer) {
     try {
         const pool = await getSqlServerConnection();
@@ -67,7 +67,7 @@ async function updateUserInSQLServer(customer) {
     }
 }
 
-// Elimina un usuario en PostgreSQL (se mantiene igual)
+// Delete a user in PostgreSQL (stays the same)
 async function deleteUserFromPostgreSQL(customer) {
     try {
         const query = `UPDATE customer SET active = false WHERE id = $1`;
@@ -100,13 +100,13 @@ async function processPendingEvents() {
         }
 
         for (const event of response.docs) {
-            console.log(`📌 Processing event: ${event.operation} for ${event.customer?.email || event.customerId}`);
+            console.log(`Processing event: ${event.operation} for ${event.customer?.email || event.customerId}`);
             
             try {
-                // Envía el evento vía WebSocket a todos los servicios
+               // Send the event via WebSocket to all services
                 sendWebSocketMessage(event.operation, event);
 
-                // Sincroniza entre bases según el tipo de operación
+                // Synchronize between databases according to the type of operation
                 if (event.operation === "CREATE") {
                     await createUserInSQLServer(event.customer);
                 } else if (event.operation === "UPDATE") {
