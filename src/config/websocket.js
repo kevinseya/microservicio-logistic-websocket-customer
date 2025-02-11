@@ -7,12 +7,12 @@ function setupWebSocket(server) {
     const wss = new Server({ server, path: "/ws" });
 
     wss.on("connection", (ws) => {
-        console.log("✅ Cliente WebSocket conectado");
+        console.log("WebSocket client connected");
         clients.add(ws);
 
         ws.on("message", async (message) => {
             const msg = message.toString().trim();
-            console.log("📩 Mensaje recibido:", msg);
+            console.log("Message received:", msg);
             try {
                 const event = JSON.parse(msg);
                 if (event.operation && event.customer) {
@@ -22,12 +22,12 @@ function setupWebSocket(server) {
                     console.warn(" Message JSON invalid. Is required 'operation' y 'customer'.");
                 }
             } catch (error) {
-                console.error("❌ Error to parse message JSON:", error.message);
+                console.error(" Error to parse message JSON:", error.message);
             }
         });
 
         ws.on("close", () => {
-            console.log("⚠️ Client WebSocket disconnected");
+            console.log("Client WebSocket disconnected");
             clients.delete(ws);
         });
 

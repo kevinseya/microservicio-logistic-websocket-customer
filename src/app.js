@@ -14,12 +14,12 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Inicializar el WebSocket en el servidor HTTP
+// Initialize the WebSocket on the HTTP server
 setupWebSocket(server);
 
 async function startServer() {
     try {
-        console.log("🔄 Initializing Websocket Service Customer...");
+        console.log(" Initializing Websocket Service Customer...");
         await setupDatabase();
         console.log("Database CouchDb verified.");
 

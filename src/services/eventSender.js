@@ -2,7 +2,7 @@
 const { sendMessageToClients } = require("../config/websocket");
 
 function sendWebSocketMessage(operation, event) {
-    // Se reenvía el mensaje a todos los clientes conectados
+// The message is forwarded to all connected clients
     sendMessageToClients(operation, event);
 }
 

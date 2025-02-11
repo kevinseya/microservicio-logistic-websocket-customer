@@ -17,8 +17,8 @@ async function setupDatabase() {
         }
         db = nano.use(dbName);
 
-        // Crear índice para poder usar el sort en el campo "timestamp"
-        // Si filtras también por "status", es conveniente incluirlo en el índice.
+// Create index to be able to use sort on the "timestamp" field
+// If you also filter by "status", it is convenient to include it in the index.
         const indexDefinition = {
             index: {
                 fields: ["status", "timestamp"]
@@ -28,17 +28,17 @@ async function setupDatabase() {
         };
 
         await db.createIndex(indexDefinition);
-        console.log("✅ Índice 'status_timestamp_index' creado o verificado.");
+        console.log("Index 'status_timestamp_index' created or verified.");
 
     } catch (error) {
-        console.error("❌ Error conectando a CouchDB:", error.message);
+        console.error("Error connecting to CouchDB:", error.message);
         process.exit(1);
     }
 }
 
 async function getDatabase() {
     if (!db) {
-        throw new Error("⚠️ La base de datos aún no está inicializada.");
+        throw new Error(" The database is not yet initialized.");
     }
     return db;
 }

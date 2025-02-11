@@ -1,20 +1,20 @@
-# Usamos la imagen oficial de Node.js desde Docker Hub
+# We use the official Node.js image from Docker Hub
 FROM node:20
 
-# Establecemos el directorio de trabajo dentro del contenedor
+# We set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Copiamos los archivos package.json y package-lock.json (si está disponible)
+# Copy the package.json and package-lock.json files (if available)
 COPY package*.json ./
 
-# Instalamos las dependencias del proyecto
+# We install the project dependencies
 RUN npm install
 
-# Copiamos el resto de los archivos de la aplicación
+# We copy the rest of the application files
 COPY . .
 
 # Exponemos el puerto en el que la aplicación va a correr
 EXPOSE 3002
 
-# Definimos el comando para ejecutar la aplicación dentro de la carpeta src
+# We define the command to run the application inside the src folder
 CMD ["node", "src/app.js"]
