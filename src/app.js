@@ -32,7 +32,7 @@ async function startServer() {
             await processPendingEvents();
         }, 10000);
 
-        const PORT = process.env.PORT || 5001;
+        const PORT = process.env.PORT || 3001;
         server.listen(PORT, () => console.log(`WebSocket Service Customer run on port ${PORT}`));
     } catch (error) {
         console.error("Error starting WebSocket Service Customer :", error.message);

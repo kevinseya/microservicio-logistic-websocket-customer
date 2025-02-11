@@ -67,6 +67,6 @@ jobs:
             # Ejecutar nuevo contenedor
             sudo docker run -d --name logistic_websocket_customer \
               --env-file .env \
-              -p 5002:5002 \
+              -p 3002:3002 \
               kevinseya/logistic_websocket_customer:latest
           EOF
